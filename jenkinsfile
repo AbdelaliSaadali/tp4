@@ -43,5 +43,26 @@ pipeline {
                 }
             }
         }
+                stage('deploy image') {
+                    steps {
+                        sh '''#!/bin/sh
+                        set -eu
+                        
+                        docker rm -f tp4-final >/dev/null 2>&1 || true
+                        
+                        docker run -d \
+                          --name tp4-final \
+                          -p 8082:80 \
+                          abdelalisaadali/tp4:latest
+                        
+                        docker inspect -f '{{.State.Running}}' tp4-final | grep -q true
+                        
+                        docker exec tp4-final sh -c \
+                          'grep -q "Welcome BDCC" /usr/share/nginx/html/index.html'
+                        
+                        echo "DEPLOYMENT SUCCESS - PORT 8082"
+                        '''
+                    }
+                }
     }
 }
