@@ -1,0 +1,47 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Cloning Git') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/AbdelaliSaadali/tp4.git'
+            }
+        }
+
+        stage('Building image') {
+            steps {
+                sh 'docker build -t tp4:latest .'
+            }
+        }
+
+        stage('Test image') {
+            steps {
+                sh '''
+                    docker run --rm tp4:latest sh -c \
+                    'grep -q "Welcome BDCC" /usr/share/nginx/html/index.html'
+                '''
+            }
+        }
+
+        stage('Publish Image') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-tp2',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_TOKEN'
+                )]) {
+                    sh '''
+                        set -eu
+                        set +x
+                        printf '%s' "$DOCKER_TOKEN" | docker login \
+                          -u "$DOCKER_USER" --password-stdin
+                        docker tag tp4:latest "$DOCKER_USER/tp4:latest"
+                        docker push "$DOCKER_USER/tp4:latest"
+                        docker logout
+                    '''
+                }
+            }
+        }
+    }
+}
